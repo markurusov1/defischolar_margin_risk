@@ -1,0 +1,8 @@
+===== SIMULATION SUMMARY =====
+total_dates: 3804
+total_positions: 500
+total_liquidations_all: 4104
+unique_positions_ever_liquidated: 500
+avg_health_factor_all: 1.2766807957641502
+avg_effective_ltv_all: 0.5499999999999998
+total_reductions_applied: 1902000

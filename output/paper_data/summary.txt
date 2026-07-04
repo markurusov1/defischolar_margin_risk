@@ -1,0 +1,5 @@
+Total DeFi Liquidations: 80210
+Total TradFi Liquidations: 4104
+Liquidation Reduction %: 94.8834309936417
+Days with DeFi Liquidations: 201
+Days with TradFi Liquidations: 9
