@@ -14,11 +14,6 @@
 - `src/uniswap/il_v3.py` – Uniswap V3 impermanent loss formulas
 - `src/defi_sim/` – DeFi simulator core
     - `simulator.py` – Position-based simulation engine (bulk)
-    - `lp.run.py` - Liquidity provider simulation runner (single)
-
-#### Stress Testing Layer
-- `src/stress_test.py` – TradFi POC (depends on: `data/eth-usd-max.csv`, `src/data_loader.py`)
-    - Initial regression model approach against historical prices and Aave health factors
 
 #### Hybrid Simulator (Full Implementation)
 - `src/hybrid_simulator.py` – TradFi position-based simulator (depends on: `src/stress_test.py`, `src/defi_sim/simulator.py`, `src/position_loader.py`, `src/data_loader.py`)

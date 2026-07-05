@@ -9,12 +9,12 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 
-from aave.aave_original import AaveSimulator
+from aave_original import AaveSimulator
 # ────────────────────────────────────────────────
 # Import your existing modules
 # ────────────────────────────────────────────────
 from position_loader import create_positions, N_POSITIONS
-from uniswap.il_v3 import UniswapV3Position
+from il_v3 import UniswapV3Position
 
 # ────────────────────────────────────────────────
 # Configuration

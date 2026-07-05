@@ -1,7 +1,7 @@
 import random
 from typing import List
 
-from uniswap.il_v3 import UniswapV3Position
+from il_v3 import UniswapV3Position
 
 # ────────────────────────────────────────────────
 # Simulation parameters (module-level defaults)

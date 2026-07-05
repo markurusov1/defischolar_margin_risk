@@ -2,7 +2,7 @@ import os
 import random
 from typing import Dict
 
-from src.position_loader import create_positions
+from position_loader import create_positions
 from run_manager import setup_run_directories, get_timeseries_csv_path
 
 # Simulator-level constant
@@ -30,7 +30,7 @@ def load_price_df():
     Raises RuntimeError if data_loader is not available or df is missing.
     """
     try:
-        from src import data_loader
+        import data_loader
         price_df = data_loader.df
         return price_df
     except Exception as e:
@@ -39,11 +39,11 @@ def load_price_df():
 
 # create a new Aave lender
 def prepare_aave_simulator():
-    from aave.aave_original import AaveSimulator
+    from aave_original import AaveSimulator
     return AaveSimulator()
 
 # The actual simulator loop
-def run_full_simulation(sim, price_df, n_positions, output_dir: str = '../../output') -> Dict:
+def run_full_simulation(sim, price_df, n_positions, output_dir: str = '../output') -> Dict:
 
     import os
     import csv
@@ -184,7 +184,7 @@ def run_full_simulation(sim, price_df, n_positions, output_dir: str = '../../out
     }
 
 # the entry point to the simulator
-def run_simulation(n_positions, output_dir: str = '../../output', run_id: str = None):
+def run_simulation(n_positions, output_dir: str = '../output', run_id: str = None):
 
     # Set up all the directories
     run_id, daily_records_dir, charts_dir, run_base_dir = setup_run_directories(output_dir, run_id)
@@ -327,7 +327,7 @@ if __name__ == "__main__":
 
     # Call chart generation
     print(f"\nGenerating analysis charts in {charts_dir}...")
-    from src.defi_sim.generate_analysis_charts import main as generate_charts_main
+    from generate_analysis_charts import main as generate_charts_main
 
     generate_charts_main(output_dir=daily_records_dir, output_charts_dir=charts_dir)
 
@@ -336,3 +336,11 @@ if __name__ == "__main__":
     print(f"Daily records: {daily_records_dir}")
     print(f"Charts: {charts_dir}")
     print(f"Timeseries CSV: {timeseries_csv_path}")
+
+    # copy to the latest output directory
+    import shutil
+    paper_data_dir = os.path.join(output_dir_root, 'paper_data')   # e.g. ../../output/paper_data
+    if os.path.exists(paper_data_dir):
+        shutil.rmtree(paper_data_dir)          # clear the stale snapshot
+    shutil.copytree(run_base_dir, paper_data_dir)  # copy the whole run folder
+    print(f"Latest run mirrored to: {paper_data_dir}")
