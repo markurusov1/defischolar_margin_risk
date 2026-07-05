@@ -1,4 +1,5 @@
 import os
+import random
 from typing import Dict
 
 from src.position_loader import create_positions
@@ -7,8 +8,16 @@ from run_manager import setup_run_directories, get_timeseries_csv_path
 # Simulator-level constant
 positions_in_pool = 500
 
+RANDOM_SEED = 42
+
+
 def prepare_positions(n_positions: int = None):
-    """Create positions and return a dict keyed by position ID."""
+    """Create positions and return a dict keyed by position ID.
+
+    NOTE: With the daily-cohort change this helper is no longer used by the main
+    run (positions are now rebuilt each day inside run_full_simulation). Left in
+    place for reference / other callers.
+    """
     if n_positions is None:
         n_positions = positions_in_pool
     positions_list = create_positions(n_positions)
@@ -34,7 +43,7 @@ def prepare_aave_simulator():
     return AaveSimulator()
 
 # The actual simulator loop
-def run_full_simulation(sim, position_objs, price_df, output_dir: str = '../../output') -> Dict:
+def run_full_simulation(sim, price_df, n_positions, output_dir: str = '../../output') -> Dict:
 
     import os
     import csv
@@ -50,11 +59,18 @@ def run_full_simulation(sim, position_objs, price_df, output_dir: str = '../../o
     # Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
 
+    random.seed(RANDOM_SEED)
+
     # loop over each date in the price dataframe
     for idx, (_, row) in enumerate(price_df.iterrows()):
         date = row['date']
         open_price = float(row['open_price'])
         close_price = float(row['close_price'])
+
+        position_objs = {
+            p.position_id: p
+            for p in create_positions(n_positions, initial_eth_price=open_price)
+        }
 
         # --- DURING DAY: Run liquidation checks at closing price ---
         total_liquidations_day = 0
@@ -92,6 +108,9 @@ def run_full_simulation(sim, position_objs, price_df, output_dir: str = '../../o
                 total_liquidations_day += 1
                 total_liquidations_all += 1
                 liquidated_today.add(pid)
+                # NOTE: position IDs repeat each day now (fresh cohort), so this
+                # set counts distinct position-SLOTS (max 500), not distinct
+                # positions across the whole run. Interpret accordingly.
                 positions_ever_liquidated.add(pid)
 
             # Build row for daily CSV
@@ -151,7 +170,8 @@ def run_full_simulation(sim, position_objs, price_df, output_dir: str = '../../o
 
     summary = {
         'total_dates': total_dates,
-        'total_positions': len(position_objs),
+        # NOTE: positions are rebuilt daily, so this is positions PER DAY.
+        'total_positions': n_positions,
         'total_liquidations_all': total_liquidations_all,
         'unique_positions_ever_liquidated': len(positions_ever_liquidated),
         'avg_health_factor_all': avg_hf_all,
@@ -169,9 +189,6 @@ def run_simulation(n_positions, output_dir: str = '../../output', run_id: str = 
     # Set up all the directories
     run_id, daily_records_dir, charts_dir, run_base_dir = setup_run_directories(output_dir, run_id)
 
-    # Open all positions
-    positions = prepare_positions(n_positions)
-
     # Load historical data
     price_df = load_price_df()
 
@@ -179,7 +196,7 @@ def run_simulation(n_positions, output_dir: str = '../../output', run_id: str = 
     lender = prepare_aave_simulator()
 
     # Run simulation over all dates and all positions
-    result = run_full_simulation(lender, positions, price_df, output_dir=daily_records_dir)
+    result = run_full_simulation(lender, price_df, n_positions, output_dir=daily_records_dir)
 
     # Add run metadata to result
     result['run_id'] = run_id

@@ -1,6 +1,7 @@
 # Hybrid - DeFi/TradFi  - simulation
 
 import os
+import random
 from datetime import datetime
 from typing import List, Dict
 
@@ -26,6 +27,9 @@ SHOCK_LEVELS_PCT = np.array([-15, -12, -9, -6, -3, 0, 3, 6, 9, 12, 15])
 SAFETY_BUFFER = 0.6  # cushion (higher = less deleveraging)
 LIQUIDATION_THRESHOLD = 1.0
 LTV_MAX = 0.65
+
+# use fixed random seed so that positions are rebuilt randomly, yet the same way every time
+RANDOM_SEED = 42
 
 
 def load_historical_data() -> pd.DataFrame:
@@ -90,7 +94,6 @@ def run_hybrid_stress_simulation(
     os.makedirs(output_dir, exist_ok=True)
     # Load historical price data and initialize positions & Aave simulator
     price_df = load_historical_data()
-    positions = prepare_positions_pool(n_positions)
     aave = AaveSimulator()
 
     # Fit regression model if in REGRESSION_MODE
@@ -120,9 +123,12 @@ def run_hybrid_stress_simulation(
     total_liquidations_all = 0
     positions_ever_liquidated = set()
 
-    print(f"Simulating {len(price_df)} days with {len(positions)} positions...")
+    print(f"Simulating {len(price_df)} days with {n_positions} positions/day...")
     print(f"Output directory: {output_dir}")
     print(f"Mode: {'Regression + IL adj'}")
+
+    # the randomizer is used in position loader
+    random.seed(RANDOM_SEED)
 
     # Main simulation loop: iterate through each day
     for idx, row in price_df.iterrows():
@@ -130,6 +136,9 @@ def run_hybrid_stress_simulation(
         open_price = float(row['open_price'])
         close_price = float(row['close_price'])
         price_change_pct = ((close_price - open_price) / open_price * 100) if open_price > 0 else 0.0
+
+        # restart positions for a new trading day
+        positions = create_positions(n_positions, initial_eth_price=open_price)
 
         daily_liquidations = 0
         liquidated_today = set()
@@ -159,13 +168,14 @@ def run_hybrid_stress_simulation(
                 # Tiered deleverage: the lower the worst-case HF, the more we restrict borrowing
                 # This creates graduated risk control, which borrows less when stress is high,
                 # but keeps most of the position alive to continue earning yield farming fees
+
                 max_allowed_ltv = LTV_MAX
-                if worst_hf < 1.2:
-                    max_allowed_ltv = 0.55  # Mild stress - drop to 55% LTV
+                if worst_hf < 0.8:
+                    max_allowed_ltv = 0.35  # Severe stress - very conservative 35%
                 elif worst_hf < 1.0:
                     max_allowed_ltv = 0.45  # Moderate stress - tighter at 45%
-                elif worst_hf < 0.8:
-                    max_allowed_ltv = 0.35  # Severe stress - very conservative 35%
+                elif worst_hf < 1.2:
+                    max_allowed_ltv = 0.55  # Mild stress - drop to 55% LTV
 
                 # Calculate the "safe" loan amount we can allow at the current open price
                 # using the max allowed LTV percentage as calculated above based on the worst case scenario
@@ -207,6 +217,9 @@ def run_hybrid_stress_simulation(
             if should_liquidate:
                 daily_liquidations += 1
                 liquidated_today.add(pos.position_id)
+                # NOTE: with daily cohorts, position IDs repeat each day, so this set
+                # counts distinct position-SLOTS (max n_positions), not distinct
+                # positions across the whole run. Interpret accordingly.
                 positions_ever_liquidated.add(pos.position_id)
 
         # Aggregate daily metrics
@@ -233,7 +246,8 @@ def run_hybrid_stress_simulation(
     # Calculate summary statistics
     summary = {
         'total_dates': len(price_df),
-        'total_positions': len(positions),
+        # NOTE: positions are rebuilt daily, so this is positions PER DAY.
+        'total_positions': n_positions,
         'total_liquidations_all': total_liquidations_all,
         'unique_positions_ever_liquidated': len(positions_ever_liquidated),
         'avg_health_factor_all': np.mean(
