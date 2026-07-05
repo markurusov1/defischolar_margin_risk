@@ -1,41 +1,122 @@
-## Project Structure Index
+# defischolar_margin_risk
+
+Simulation code for comparing **fixed Loan-to-Value (LTV) liquidation rules** used by
+DeFi lending protocols (Aave-style) against a **TradFi-inspired dynamic portfolio-margin**
+approach, applied to Uniswap v3 concentrated-liquidity positions used as collateral.
+
+The project runs two simulations over the same historical ETH price range and compares
+how often positions are liquidated under each model.
+
+---
+
+## Quick start
+
+Requirements: Python 3.8+ with `pandas`, `numpy`, `scikit-learn`, and `matplotlib`.
+
+```bash
+pip install pandas numpy scikit-learn matplotlib
+```
+
+All scripts are run **from inside the `src/` directory** (imports assume `src/` is the
+working directory):
+
+```bash
+cd src
+python simulator.py          # 1. DeFi baseline
+python hybrid_simulator.py   # 2. TradFi-inspired hybrid
+python charts.py             # 3. Comparison figures + summary
+```
+
+**Run them in this order — it is a hard dependency chain, not a preference:**
+
+1. `simulator.py` produces the DeFi baseline and copies its results into
+   `output/paper_data/`.
+2. `hybrid_simulator.py` **trains its regression on the DeFi baseline**, reading
+   `output/paper_data/liquidation_timeseries.csv`. If run first (or on a fresh clone
+   with no DeFi run yet) it falls back to a degraded "direct mode" and results will not
+   match. Whenever `simulator.py` is re-run, re-run the hybrid too.
+3. `charts.py` reads **both** the DeFi and hybrid results from `output/paper_data/` and
+   generates the paper figures and `summary.txt`, so it must run last.
+
+> Note: `simulator.py` takes roughly 10–15 minutes over the full price history
+> (it rebuilds the position cohort each day).
+
+---
+
+## How the two models work
+
+Both simulations use the same daily ETH/USD price series and the same random position
+cohorts (see "Reproducibility" below).
+
+- **Each simulated day** opens a fresh set of 500 Uniswap v3 positions created at that
+  day's opening price (which equals the previous day's close in the data), and checks
+  whether each position survives to the day's close.
+- **DeFi baseline (`simulator.py`)** applies a fixed 65% LTV with a 70% liquidation
+  threshold. A position is liquidated when its health factor falls below 1.
+- **Hybrid (`hybrid_simulator.py`)** stress-tests each position across 11 price shocks
+  (−15% … +15%), then applies a graduated "sliding scale": the worse the projected
+  worst-case health factor, the more the borrowing limit is tightened (down to 35% LTV
+  under severe stress), reducing loans *before* a liquidation would occur.
+
+---
+
+## Project structure
 
 ### Data
-- `data/eth-usd-max.csv` – Historical ETH-USD price data (input for stress testing)
+- `data/eth-usd-max.csv` – Historical ETH/USD daily price data (input for both
+  simulations). Each row's `open_price` equals the prior day's `close_price`.
 
-### Source Code
+### Source (`src/`)
 
-#### Data Loading Layer
-- `src/data_loader.py` – Loads and preprocesses ETH-USD historical data
-- `src/position_loader.py` – Loads and parses position data for simulation
+Data / inputs
+- `data_loader.py` – Loads and preprocesses the ETH/USD price data.
+- `position_loader.py` – Creates the Uniswap v3 position cohort (funding, ETH/USDC
+  split, and price-range width per position).
 
-#### DeFi Simulation Layer
-- `src/aave/aave_original.py` – Aave protocol health factor calculations
-- `src/uniswap/il_v3.py` – Uniswap V3 impermanent loss formulas
-- `src/defi_sim/` – DeFi simulator core
-    - `simulator.py` – Position-based simulation engine (bulk)
+Core math
+- `il_v3.py` – Uniswap v3 concentrated-liquidity math and impermanent-loss.
+- `aave_original.py` – Aave-style health-factor and liquidation logic.
 
-#### Hybrid Simulator (Full Implementation)
-- `src/hybrid_simulator.py` – TradFi position-based simulator (depends on: `src/stress_test.py`, `src/defi_sim/simulator.py`, `src/position_loader.py`, `src/data_loader.py`)
-    - Combines DeFi calculations with TradFi stress testing
-    - Sliding scale and stress test methodology
+Simulators
+- `simulator.py` – DeFi fixed-LTV baseline. Writes a timestamped `run_<...>/` folder
+  and mirrors its results into `output/paper_data/`.
+- `hybrid_simulator.py` – TradFi-inspired dynamic-margin model. Reads the DeFi baseline
+  from `output/paper_data/`, writes a timestamped `tradefi_adjusted_<...>/` folder, and
+  mirrors its results into `output/paper_data/`.
 
-#### Visualization Layer
-- `src/charts.py` – Chart generation and plotting (depends on: `output/paper_data/`)
+Utilities / visualization
+- `run_manager.py` – Creates timestamped run directories and result paths.
+- `charts.py` – Generates the paper's comparison figures and `summary.txt` from
+  `output/paper_data/`.
+- `generate_analysis_charts.py` – Additional DeFi-only diagnostic charts (invoked
+  automatically at the end of a `simulator.py` run).
 
-### Output Directory
-- `output/paper_data/`
-    - `summary.txt` – Summary statistics (generated by `src/hybrid_simulator.py`)
-    - `liquidation_timeseries.csv` – DeFi liquidation results (from DeFi simulator run)
-    - `hybrid_adjusted_timeseries.csv` - hybrid liquidation results (from hybrid simulator run)
-    - `*.png` – Generated charts and visualizations (from `src/charts.py`)
-- `output/run_20260111_122829` - contains one of the runs of DeFi simulator
-- `output/tradefi_adjusted_20260118_1204` - contains of the runs of the hybrid simulator
+### Output (`output/`)
+- `paper_data/` – The canonical, always-current result set the figures are built from:
+    - `liquidation_timeseries.csv` – DeFi results (mirrored by `simulator.py`).
+    - `hybrid_adjusted_timeseries.csv` – Hybrid results (mirrored by `hybrid_simulator.py`).
+    - `summary.txt` – Headline statistics (regenerated by `charts.py`).
+    - `*.png` – The comparison figures (regenerated by `charts.py`).
+- `run_<timestamp>/` – Full per-run DeFi output, kept for debugging / audit trail.
+- `tradefi_adjusted_<timestamp>/` – Full per-run hybrid output, kept for the same reason.
+
+> `paper_data/` always reflects the **most recent** run of each simulator. The
+> timestamped folders are the historical archive.
 
 ### Documentation
-- `docs/notes/` – various notes and research done along the way
-- `docs/paper_materials/` - preliminary research on SEC rules and Duffie's paper
-    - `sec_duffie` - Analysis
-    - `summary.md` – Summary table of findings
-- `docs/paper_outline.md` - paper outline
-- `docs/paper.draft.md` - the actual paper# defischolar_margin_risk
+- `docs/` – Paper draft, outline, and supporting research notes (SEC portfolio-margin
+  rules, Duffie's risk-based haircut framework, etc.).
+
+---
+
+## Reproducibility
+
+Both simulators call `random.seed(42)` once before their main loop. Because the seed and
+the per-day position-creation order are identical across the two runs, **the DeFi and
+hybrid simulations see the exact same position cohorts each day** — so the comparison
+isolates the difference between the two liquidation rules, not luck of the draw. Re-running
+either script on any machine reproduces the same numbers.
+
+To check that a result is not an artifact of one seed, change `RANDOM_SEED` (defined near
+the top of each simulator) to a few different values and confirm the reduction percentage
+holds.
