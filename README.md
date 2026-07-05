@@ -27,21 +27,19 @@ python hybrid_simulator.py   # 2. TradFi-inspired hybrid
 python charts.py             # 3. Comparison figures + summary
 ```
 
-**Run them in this order — it is a hard dependency chain, not a preference:**
+**The scripts must be run in this order:**
 
 1. `simulator.py` produces the DeFi baseline and copies its results into
    `output/paper_data/`.
 2. `hybrid_simulator.py` **trains its regression on the DeFi baseline**, reading
-   `output/paper_data/liquidation_timeseries.csv`. If run first (or on a fresh clone
-   with no DeFi run yet) it falls back to a degraded "direct mode" and results will not
-   match. Whenever `simulator.py` is re-run, re-run the hybrid too.
+   `output/paper_data/liquidation_timeseries.csv`. Whenever `simulator.py` is re-run, re-run the hybrid too.
 3. `charts.py` reads **both** the DeFi and hybrid results from `output/paper_data/` and
-   generates the paper figures and `summary.txt`, so it must run last.
+   generates the paper figures and `summary.txt`, so it must run last, after both simulators have finished.
 
 > Note: `simulator.py` takes roughly 10–15 minutes over the full price history
 > (it rebuilds the position cohort each day).
 > 
-> After running everything, check output/paper_data/summary.txt to see the headline numbers (39,649 vs 929 liquidations)
+> After running everything, check output/paper_data/summary.txt to see the results
 
 ---
 
