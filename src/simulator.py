@@ -337,10 +337,33 @@ if __name__ == "__main__":
     print(f"Charts: {charts_dir}")
     print(f"Timeseries CSV: {timeseries_csv_path}")
 
-    # copy to the latest output directory
+    # ===== NEW: mirror THIS run's DeFi outputs into a fixed "paper_data" folder so
+    #       downstream code (hybrid_simulator.py + chart scripts) always reads the
+    #       latest DeFi baseline WITHOUT hand-editing paths. The timestamped run_<...>
+    #       folder is kept intact for debugging / audit trail.
+    #
+    #       Merge-safe: we copy only the DeFi files into paper_data/ and do NOT wipe
+    #       the folder, so the hybrid run's outputs (which also mirror here) survive. =====
     import shutil
-    paper_data_dir = os.path.join(output_dir_root, 'paper_data')   # e.g. ../../output/paper_data
-    if os.path.exists(paper_data_dir):
-        shutil.rmtree(paper_data_dir)          # clear the stale snapshot
-    shutil.copytree(run_base_dir, paper_data_dir)  # copy the whole run folder
-    print(f"Latest run mirrored to: {paper_data_dir}")
+
+    # run_base_dir lives under the output base (e.g. ../output/run_<ts>); paper_data
+    # is a sibling of run_base_dir, i.e. ../output/paper_data
+    output_base = os.path.dirname(run_base_dir)
+    paper_data_dir = os.path.join(output_base, 'paper_data')
+    os.makedirs(paper_data_dir, exist_ok=True)
+
+    # 1) the DeFi timeseries CSV (this is what hybrid_simulator.py trains on)
+    shutil.copy2(timeseries_csv_path, os.path.join(paper_data_dir, 'liquidation_timeseries.csv'))
+
+    # 2) this run's daily records (so the chart scripts can regenerate DeFi figures)
+    paper_daily_dir = os.path.join(paper_data_dir, 'daily_records')
+    if os.path.exists(paper_daily_dir):
+        shutil.rmtree(paper_daily_dir)          # replace only the DeFi daily records
+    shutil.copytree(daily_records_dir, paper_daily_dir)
+
+    # 3) any DeFi charts produced for this run
+    if os.path.isdir(charts_dir):
+        for fname in os.listdir(charts_dir):
+            shutil.copy2(os.path.join(charts_dir, fname), os.path.join(paper_data_dir, fname))
+
+    print(f"Latest DeFi run mirrored to: {paper_data_dir}")

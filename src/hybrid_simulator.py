@@ -20,7 +20,7 @@ from il_v3 import UniswapV3Position
 # Configuration
 # ────────────────────────────────────────────────
 IL_ADJUST_FACTOR = 0.5  # IL impact on a health factor
-HISTORICAL_CSV_PATH = "../output/run_20260111_122829/liquidation_timeseries.csv"
+HISTORICAL_CSV_PATH = "../output/paper_data/liquidation_timeseries.csv"
 
 # percentage of price change
 SHOCK_LEVELS_PCT = np.array([-15, -12, -9, -6, -3, 0, 3, 6, 9, 12, 15])
@@ -273,6 +273,15 @@ def run_hybrid_stress_simulation(
         for k, v in summary.items():
             f.write(f"{k}: {v}\n")
     print(f"Summary saved to: {summary_path}")
+
+    import shutil
+    # output_dir is e.g. ../output/tradefi_adjusted_<ts>; paper_data is its sibling
+    paper_data_dir = os.path.join(os.path.dirname(output_dir), 'paper_data')
+    os.makedirs(paper_data_dir, exist_ok=True)
+    shutil.copy2(ts_path, os.path.join(paper_data_dir, 'hybrid_adjusted_timeseries.csv'))
+    shutil.copy2(summary_path, os.path.join(paper_data_dir, 'summary.txt'))
+    print(f"Hybrid outputs mirrored to: {paper_data_dir}")
+
     return {
         'timeseries_df': ts_df,
         'summary': summary,
