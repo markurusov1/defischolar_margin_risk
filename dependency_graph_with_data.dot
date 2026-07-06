@@ -1,0 +1,51 @@
+digraph dependencies {
+  rankdir=TB;
+  node [shape=box, style=filled, fillcolor="#FFFFEE"];
+  
+  // Data nodes (CSV/files)
+  node [shape=cylinder, fillcolor="#E8F4F8"];
+  eth_usd_data [label="eth-usd-max.csv"];
+  trading_day_csv [label="trading_day_*.csv\n(daily records)"];
+  liquidation_ts_csv [label="liquidation_timeseries.csv\n(DeFi timeseries)"];
+  hybrid_ts_csv [label="hybrid_adjusted_timeseries.csv\n(TradFi timeseries)"];
+  
+  // Code nodes
+  node [shape=box, fillcolor="#FFFFEE"];
+  data_loader;
+  simulator;
+  hybrid_simulator;
+  position_loader;
+  run_manager;
+  aave_original;
+  il_v3;
+  generate_analysis_charts;
+  charts;
+  
+  // Data flow edges
+  eth_usd_data -> data_loader [label="pd.read_csv()"];
+  data_loader -> simulator [label="df (prices)"];
+  data_loader -> hybrid_simulator [label="df (prices)"];
+  
+  // Simulator produces CSVs
+  simulator -> trading_day_csv [label="writes daily data"];
+  simulator -> liquidation_ts_csv [label="export_timeseries_to_csv()"];
+  position_loader -> simulator [label="create_positions()"];
+  run_manager -> simulator [label="setup_run_directories()"];
+  aave_original -> simulator [label="AaveSimulator"];
+  
+  // Hybrid simulator produces CSV
+  hybrid_simulator -> hybrid_ts_csv [label="to_csv()"];
+  liquidation_ts_csv -> hybrid_simulator [label="reads for model\ntraining"];
+  position_loader -> hybrid_simulator [label="create_positions()"];
+  aave_original -> hybrid_simulator [label="AaveSimulator"];
+  il_v3 -> hybrid_simulator [label="UniswapV3Position"];
+  
+  // Charts read CSVs
+  generate_analysis_charts -> trading_day_csv [label="load_daily_files()"];
+  charts -> liquidation_ts_csv [label="pd.read_csv()"];
+  charts -> hybrid_ts_csv [label="pd.read_csv()"];
+  
+  label = "Data dependency graph with CSV files produced by simulators";
+  labelloc = "t";
+  fontsize = 14;
+}
