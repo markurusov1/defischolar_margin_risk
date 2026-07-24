@@ -8,7 +8,7 @@ class UniswapV3Position:
     then computing the position's value at any given price (e.g., for use as collateral in Aave).
     """
 
-    def __init__(self, id:str, initial_eth_max: float, initial_usdc_max: float, range_width: float):
+    def __init__(self, id:str, initial_eth_max: float, initial_usdc_max: float, range_width: float, initial_eth_price: float):
         """
         Initialize the position.
 
@@ -23,7 +23,7 @@ class UniswapV3Position:
             raise ValueError("Range width should be between 0 and 1 (exclusive).")
 
         # Initial price (USDC per ETH) implied by max deposits
-        self.initial_price = initial_usdc_max / initial_eth_max
+        self.initial_price = initial_eth_price
 
         # Concentrated price range
         self.lower_price = self.initial_price * (1 - range_width)

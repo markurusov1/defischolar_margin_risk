@@ -10,21 +10,6 @@ positions_in_pool = 500
 
 RANDOM_SEED = 42
 
-
-def prepare_positions(n_positions: int = None):
-    """Create positions and return a dict keyed by position ID.
-
-    NOTE: With the daily-cohort change this helper is no longer used by the main
-    run (positions are now rebuilt each day inside run_full_simulation). Left in
-    place for reference / other callers.
-    """
-    if n_positions is None:
-        n_positions = positions_in_pool
-    positions_list = create_positions(n_positions)
-    # Convert the list to dict: {position_id: position_obj}
-    return {pos.position_id: pos for pos in positions_list}
-
-
 def load_price_df():
     """Load the price dataframe from data_loader.py (must expose df).
     Raises RuntimeError if data_loader is not available or df is missing.

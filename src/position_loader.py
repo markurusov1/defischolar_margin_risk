@@ -11,9 +11,8 @@ MIN_FUNDING = 6000
 MAX_FUNDING = 10000
 MIN_RANGE_WIDTH = 0.10  # ±10%
 MAX_RANGE_WIDTH = 0.60  # ±60%
-INITIAL_ETH_PRICE = 2500.0  # Realistic mid-Jan 2026 assumption
 
-__all__ = ["create_positions", "N_POSITIONS", "MIN_FUNDING", "MAX_FUNDING", "INITIAL_ETH_PRICE"]
+__all__ = ["create_positions", "N_POSITIONS", "MIN_FUNDING", "MAX_FUNDING"]
 
 
 def create_positions(
@@ -22,8 +21,9 @@ def create_positions(
         max_funding: float = MAX_FUNDING,
         min_range_width: float = MIN_RANGE_WIDTH,
         max_range_width: float = MAX_RANGE_WIDTH,
-        initial_eth_price: float = INITIAL_ETH_PRICE,
-        id_prefix: str = "id#",
+    *,
+    initial_eth_price: float,
+    id_prefix: str = "id#",
 ) -> List[UniswapV3Position]:
     """
     Create a list of UniswapV3Position instances.
@@ -48,7 +48,7 @@ def create_positions(
         range_width = random.uniform(min_range_width, max_range_width)
 
         # create the position
-        pos = UniswapV3Position(id_prefix + f"{i}", eth_max, usdc_max, range_width)
+        pos = UniswapV3Position(id_prefix + f"{i}", eth_max, usdc_max, range_width, initial_eth_price)
 
         # add position to the list
         results.append(pos)
@@ -57,4 +57,4 @@ def create_positions(
 
 
 if __name__ == "__main__":
-    positions = create_positions(n_positions=10)
+    positions = create_positions(n_positions=10, initial_eth_price=3000.0)
