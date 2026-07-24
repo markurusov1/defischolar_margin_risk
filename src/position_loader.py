@@ -17,13 +17,13 @@ __all__ = ["create_positions", "N_POSITIONS", "MIN_FUNDING", "MAX_FUNDING", "INI
 
 
 def create_positions(
-        n_positions: int = N_POSITIONS,
-        min_funding: float = MIN_FUNDING,
-        max_funding: float = MAX_FUNDING,
-        min_range_width: float = MIN_RANGE_WIDTH,
-        max_range_width: float = MAX_RANGE_WIDTH,
-        initial_eth_price: float = INITIAL_ETH_PRICE,
-        id_prefix: str = "id#",
+n_positions: int = N_POSITIONS,
+min_funding: float = MIN_FUNDING,
+max_funding: float = MAX_FUNDING,
+min_range_width: float = MIN_RANGE_WIDTH,
+max_range_width: float = MAX_RANGE_WIDTH,
+initial_eth_price: float = INITIAL_ETH_PRICE,
+id_prefix: str = "id#",
 ) -> List[UniswapV3Position]:
     """
     Create a list of UniswapV3Position instances.
