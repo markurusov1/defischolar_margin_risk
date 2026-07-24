@@ -30,7 +30,7 @@ def create_positions(
 
     Returns:
         List of positions created with positional args:
-        UniswapV3Position(id, eth_max, usdc_max, range_width)
+        UniswapV3Position(id, eth_max, usdc_max, range_width, initial_eth_price)
     """
     results: List[UniswapV3Position] = []
 

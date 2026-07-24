@@ -13,16 +13,17 @@ class UniswapV3Position:
         Initialize the position.
 
         Args:
-            position id
+            id: Position identifier.
             initial_eth_max: Maximum ETH to deposit.
             initial_usdc_max: Maximum USDC to deposit.
             range_width: Fractional width for the price range (e.g., 0.1 for ±10%).
+            initial_eth_price: Initial ETH price in USDC/ETH used to define the price range.
         """
         self.position_id=id
         if range_width <= 0 or range_width >= 1:
             raise ValueError("Range width should be between 0 and 1 (exclusive).")
 
-        # Initial price (USDC per ETH) implied by max deposits
+        # Market price at day open from historical data
         self.initial_price = initial_eth_price
 
         # Concentrated price range
