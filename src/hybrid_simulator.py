@@ -3,7 +3,7 @@
 import os
 import random
 from datetime import datetime
-from typing import List, Dict
+from typing import Dict
 
 import numpy as np
 import pandas as pd
@@ -41,10 +41,6 @@ def load_historical_data() -> pd.DataFrame:
         return df[['date', 'open_price', 'close_price']]
     except Exception as e:
         raise RuntimeError("Could not load price data from data_loader") from e
-
-
-def prepare_positions_pool(n_positions: int = N_POSITIONS) -> List[UniswapV3Position]:
-    return create_positions(n_positions=n_positions)
 
 
 def project_health_under_shock(
